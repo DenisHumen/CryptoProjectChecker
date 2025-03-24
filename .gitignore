@@ -174,3 +174,6 @@ cython_debug/
 .pypirc
 
 
+data/reserv_proxy.csv
+data/wallet.csv
+results/
