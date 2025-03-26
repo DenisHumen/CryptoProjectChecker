@@ -10,7 +10,7 @@ import time
 import requests
 import json
 from config.pyload_presset.random_pyload import random_pyload_presset
-from modules.monad import monad_checker
+from modules.monad import monad_checker, process_json_to_csv
 import modules.monad as monad
 
 config = toml.load('config/general_config.toml')
@@ -118,6 +118,7 @@ def menu():
                 reserv_proxies = get_reserv_proxies()
                 results = process_wallets(wallets, proxies, reserv_proxies)
                 monad.process_results(results)
+                process_json_to_csv()
                 
     except Exception as e:
         log_error('Error: ' + str(e))
