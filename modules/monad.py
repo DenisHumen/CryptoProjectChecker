@@ -48,6 +48,11 @@ def monad_checker(wallet_address, proxy, pyload):
             except json.JSONDecodeError:
                 data = {"wallet_address": wallet_address, "response": response.text}
             
+            # Save the result to a JSON file immediately
+            file_path = f"results/wallet_json_data/{wallet_address}.json"
+            with open(file_path, 'w') as json_file:
+                json.dump(data, json_file)
+            
             return data
         
         except requests.exceptions.ProxyError as e:

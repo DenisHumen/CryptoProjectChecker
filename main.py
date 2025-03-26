@@ -105,6 +105,7 @@ def menu():
                 "What do you want to do?",
                 choices=[
                     Choice('💲 start stats MONAD', 'stats_monad'),
+                    Choice('📊 start stats MONAD and save to CSV', 'stats_monad_csv'),
                     Choice('❌ Exit', 'exit')
                 ],
                 qmark='🛠️',
@@ -119,9 +120,11 @@ def menu():
                 results = process_wallets(wallets, proxies, reserv_proxies)
                 monad.process_results(results)
                 process_json_to_csv()
-                
+            elif action == 'stats_monad_csv':
+                process_json_to_csv()
     except Exception as e:
         log_error('Error: ' + str(e))
+
 
 def main():
     menu()
