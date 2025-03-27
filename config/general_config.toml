@@ -1,3 +1,4 @@
+# ----------- только для "💲 start stats MONAD" -----------
 THRENDS = 10
 
 LIMIT_REPLACE_PROXY = 10
@@ -5,4 +6,4 @@ LIMIT_REPLACE_PROXY = 10
 #sleep time
 SLEEP_BEATWEEN_WALLET = [1, 3] # seconds
 SLEEP_BEATWEEN_REAPLECE_PROXY = [1, 3] # seconds
-
+#-----------------------------------------------------------

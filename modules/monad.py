@@ -4,15 +4,26 @@ import json
 import os
 import csv
 from datetime import datetime
-from config.pyload_presset.random_pyload import random_pyload_presset
+import random
+import threading
+from tqdm import tqdm
+import time
 
 log_file_path = 'results/logs/log'
+
+# Fixed pyload
+pyload1 = {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "get_account",
+    "params": "0x"
+}
 
 def log_error(message):
     with open(log_file_path, 'a') as log_file:
         log_file.write(message + '\n')
 
-def monad_checker(wallet_address, proxy, pyload):
+def monad_checker(wallet_address, proxy, pyload=pyload1):
     if pyload is not None:
         try:
             url = f'https://layerhub.xyz/be-api/wallets/monad_testnet/{wallet_address}'
@@ -36,13 +47,13 @@ def monad_checker(wallet_address, proxy, pyload):
                 raise ValueError(f'HTTP error: {response.status_code}')
             
             if not response.content:
-                log_error('Empty response content')
+                log_error(f'Empty response content - {response.text}')
                 raise ValueError('Empty response content')
             
             try:
                 data = response.json()
                 if isinstance(data, dict) and data.get("message") == "Wallet is not found for chain_id: monad_testnet":
-                    log_error("Wallet not found, retrying...")
+                    log_error(f"Wallet {wallet_address} not found, retrying...")
                     raise ValueError("Wallet not found, retrying...")
                 data['wallet_address'] = wallet_address
             except json.JSONDecodeError:
@@ -56,7 +67,7 @@ def monad_checker(wallet_address, proxy, pyload):
             return data
         
         except requests.exceptions.ProxyError as e:
-            log_error('Proxy error: ' + str(e))
+            log_error(f'Proxy {proxy} error: ' + str(e))
             raise e
         except requests.exceptions.RequestException as e:
             log_error('Request error: ' + str(e))
@@ -66,7 +77,7 @@ def monad_checker(wallet_address, proxy, pyload):
             raise e
 
     else:
-        log_error('Error: No pyload found')
+        log_error(f'Error: No pyload found {pyload}')
 
 def process_results(results):
     for result in results:
@@ -169,3 +180,76 @@ def parse_json_response(response):
             'active_months': '',
             'last_updated': ''
         }
+
+def get_wallets_and_proxies():
+    wallets = []
+    proxies = []
+    with open('data/wallet.csv', mode='r') as file:
+        reader = csv.reader(file)
+        next(reader)  # Skip header
+        for row in reader:
+            if len(row) >= 2:
+                wallets.append(row[0])
+                proxies.append(row[1])
+    return wallets, proxies
+
+def get_reserv_proxies():
+    reserv_proxies = []
+    with open('data/reserv_proxy.csv', mode='r') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            if len(row) > 0:
+                reserv_proxies.append(row[0])
+    return reserv_proxies
+
+def process_wallets(wallets, proxies, reserv_proxies, num_threads, sleep_between_wallet, sleep_between_replace_proxy, limit_replace_proxy):
+    results = []
+    threads = []
+    with tqdm(total=len(wallets)) as pbar:
+        for wallet_address, proxy in zip(wallets, proxies):
+            if len(threads) >= num_threads:
+                for t in threads:
+                    t.join()
+                    pbar.update(1)
+                threads = []
+            thread = threading.Thread(target=process_wallet, args=(wallet_address, proxy, reserv_proxies, results, sleep_between_replace_proxy, limit_replace_proxy))
+            thread.start()
+            threads.append(thread)
+            time.sleep(random.uniform(*sleep_between_wallet))
+        
+        for t in threads:
+            t.join()
+            pbar.update(1)
+    
+    ensure_all_wallets_processed(wallets, proxies, reserv_proxies, results, sleep_between_replace_proxy, limit_replace_proxy)
+    return results
+
+def process_wallet(wallet_address, proxy, reserv_proxies, results, sleep_between_replace_proxy, limit_replace_proxy):
+    success = False
+    attempts = 0
+    while not success and attempts < limit_replace_proxy:
+        try:
+            result = monad_checker(wallet_address, proxy)
+            results.append(result)
+            success = True
+        except ValueError as e:
+            log_error(str(e))
+            time.sleep(random.uniform(*sleep_between_replace_proxy))
+        except requests.exceptions.ProxyError as e:
+            log_error(f'Proxy error with proxy {proxy}: ' + str(e))
+            time.sleep(random.uniform(*sleep_between_replace_proxy))
+            proxy = random.choice(reserv_proxies)
+        except requests.exceptions.RequestException as e:
+            log_error(f'Request error: ' + str(e))
+            time.sleep(random.uniform(*sleep_between_replace_proxy))
+        except json.JSONDecodeError as e:
+            log_error(f'JSON decode error: ' + str(e))
+            time.sleep(random.uniform(*sleep_between_replace_proxy))
+        attempts += 1
+
+def ensure_all_wallets_processed(wallets, proxies, reserv_proxies, results, sleep_between_replace_proxy, limit_replace_proxy):
+    for wallet_address in wallets:
+        file_path = f"results/wallet_json_data/{wallet_address}.json"
+        if not os.path.exists(file_path):
+            proxy = random.choice(reserv_proxies)
+            process_wallet(wallet_address, proxy, reserv_proxies, results, sleep_between_replace_proxy, limit_replace_proxy)
