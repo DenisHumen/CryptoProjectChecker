@@ -12,7 +12,11 @@ from modules.gaszip_monad_faucet_checker import (
     gaszip_monad_checker_export_json_to_csv
 )
 
+from modules.gel_all_json import clear_wallet_json_data
+from modules.check_files import check_and_create_paths
+
 def menu():
+    check_and_create_paths()
     try:
         while True:
             action = select(
@@ -20,6 +24,7 @@ def menu():
                 choices=[
                     Choice('💲 start stats MONAD', 'stats_monad'),
                     Choice('🔍 gaszip monad faucet checker', 'gaszip_monad_faucet_checker'),
+                    Choice('🗑️ Clear wallet json data', 'clear_wallet_json_data'),
                     Choice('❌ Exit', 'exit')
                 ],
                 qmark='🛠️',
@@ -43,6 +48,10 @@ def menu():
             elif action == 'gaszip_monad_faucet_checker':
                 gaszip_monad_checker_process_wallets_from_csv()
                 gaszip_monad_checker_export_json_to_csv()
+            elif action == 'clear_wallet_json_data':
+                clear_wallet_json_data()
+        
+
     except Exception as e:
         print(f"Error: {str(e)}")
 

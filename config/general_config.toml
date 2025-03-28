@@ -1,5 +1,5 @@
 # ----------- только для "💲 start stats MONAD" -----------
-THRENDS = 10
+THRENDS = 30
 
 LIMIT_REPLACE_PROXY = 10
 
