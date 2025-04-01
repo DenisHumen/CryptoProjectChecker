@@ -94,7 +94,8 @@ def process_json_to_csv():
     csv_file_path = 'results/result.csv'
     fieldnames = [
         'wallet_address', 'top_percent', 'transaction_count', 'interacted_contracts',
-        'wallet_balance', 'active_days', 'active_weeks', 'active_months', 'last_updated'
+        'wallet_balance', 'active_days', 'active_weeks', 'active_months', 'last_updated',
+        'one_million_nads' 
     ]
 
     with open(csv_file_path, mode='w', newline='') as csv_file:
@@ -120,7 +121,8 @@ def process_json_to_csv():
                         'active_days': parsed_data['active_days'],
                         'active_weeks': parsed_data['active_weeks'],
                         'active_months': parsed_data['active_months'],
-                        'last_updated': parsed_data['last_updated']
+                        'last_updated': parsed_data['last_updated'],
+                        'one_million_nads': parsed_data['one_million_nads']  # Write new field to CSV
                     })
 
 def extract_value(response, key):
@@ -158,6 +160,7 @@ def parse_json_response(response):
         active_weeks = data['cardsList'][1]['data']['activeWeeks']['value']
         active_months = data['cardsList'][1]['data']['activeMonths']['value']
         last_updated = datetime.utcfromtimestamp(data['lastUpdated']).strftime('%Y-%m-%d %H:%M:%S')
+        one_million_nads = data['widget']['data']['stats'][2]['value']  # New field
         return {
             'top_percent': top_percent,
             'transaction_count': transaction_count,
@@ -166,7 +169,8 @@ def parse_json_response(response):
             'active_days': active_days,
             'active_weeks': active_weeks,
             'active_months': active_months,
-            'last_updated': last_updated
+            'last_updated': last_updated,
+            'one_million_nads': one_million_nads  # Include new field in the result
         }
     except (KeyError, ValueError, TypeError) as e:
         log_error(f'Error parsing response: {str(e)}')
@@ -178,7 +182,8 @@ def parse_json_response(response):
             'active_days': '',
             'active_weeks': '',
             'active_months': '',
-            'last_updated': ''
+            'last_updated': '',
+            'one_million_nads': ''  # Default value for new field in case of error
         }
 
 def get_wallets_and_proxies():
