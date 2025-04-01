@@ -24,13 +24,13 @@ def monad():
                 Choice('💲 Start stats MONAD', 'stats_monad'),
                 Choice('🔍 GasZip monad faucet checker', 'gaszip_monad_faucet_checker'),
                 Choice('🗑️ Clear wallet json data | Удалит все созданные json после запроса', 'clear_wallet_json_data'),
-                Choice('❌ Exit', 'exit')
+                Choice('🔙 Back', 'Back')
             ],
             qmark='🛠️',
             pointer='👉'
         ).ask()
 
-        if action == 'exit':
+        if action == 'Back':
             break
         elif action == 'stats_monad':
             # Получение данных кошельков и прокси
