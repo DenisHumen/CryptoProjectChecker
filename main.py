@@ -54,6 +54,7 @@ def monad():
             choices=[
                 Choice('💲 Start stats MONAD', 'stats_monad'),
                 Choice('🔍 GasZip monad faucet checker', 'gaszip_monad_faucet_checker'),
+                Choice('🕧 result.json TO result.csv', 'json_to_csv'),
                 Choice('🗑️ Clear wallet json data | Удалит все созданные json после запроса', 'clear_wallet_json_data'),
                 Choice('🔙 Back', 'Back')
             ],
@@ -88,6 +89,8 @@ def monad():
         elif action == 'clear_wallet_json_data':
             # Очистка данных JSON
             clear_wallet_json_data()
+        elif action == 'json_to_csv':
+            process_json_to_csv()
 
 def megaeth():
     while True:
