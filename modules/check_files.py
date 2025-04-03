@@ -6,7 +6,9 @@ def ensure_path_exists(path, is_file=False, created_items=None):
         if not os.path.exists(path):
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, 'w') as f:
-                pass
+                # Add specific content for data/wallet.csv
+                if path == "data/wallet.csv":
+                    f.write("wallet_address,proxy\n")
             if created_items is not None:
                 created_items.append(path)
     else:

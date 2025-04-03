@@ -20,6 +20,32 @@ from modules.megaeth import (
     process_results_to_csv as process_megaeth_results_to_csv
 )
 
+import csv
+from colorama import Fore, Style
+
+def validate_proxies(file_path):
+    with open(file_path, 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        invalid_lines = [
+            line_number for line_number, row in enumerate(reader, start=2)
+            if not row.get('proxy', '').startswith('http://')
+        ]
+        
+    if invalid_lines:
+        print(Fore.RED + "Error: Proxy format is incorrect on the following lines:" + Style.RESET_ALL)
+        max_line_length = max(len(f"  Line {line}  ") for line in invalid_lines)
+        border = "═" * (max_line_length)  # Adjust border length dynamically
+        print(Fore.RED + Style.BRIGHT + f"╔{border}╗")
+        for line in invalid_lines:
+            line_str = f"  Line {line}  "
+            padding = (max_line_length - len(line_str)) // 2
+            print(f"║{' ' * padding}{line_str}{' ' * (max_line_length - len(line_str) - padding)}║")
+        print(Fore.RED + Style.BRIGHT + f"╚{border}╝" + Style.RESET_ALL)
+        print(Fore.RED + "Example of correct format:\n\twallet_address,proxy\n\t0x90D9f2c2c60FHHTDTaFEA1D6FFDFRERG7116f68,http://login:password@ip:port" + Style.RESET_ALL)
+        exit(1)
+    
+    print(Fore.GREEN + "All proxies are in the correct format." + Style.RESET_ALL)
+
 def monad():
     while True:
         # Основное меню для работы с MONAD
@@ -27,7 +53,6 @@ def monad():
             "What do you want to do?",
             choices=[
                 Choice('💲 Start stats MONAD', 'stats_monad'),
-                Choice('🕧 result.json to result.csv', 'json_to_csv'),
                 Choice('🔍 GasZip monad faucet checker', 'gaszip_monad_faucet_checker'),
                 Choice('🗑️ Clear wallet json data | Удалит все созданные json после запроса', 'clear_wallet_json_data'),
                 Choice('🔙 Back', 'Back')
@@ -63,8 +88,6 @@ def monad():
         elif action == 'clear_wallet_json_data':
             # Очистка данных JSON
             clear_wallet_json_data()
-        elif action == 'json_to_csv':
-            process_json_to_csv()
 
 def megaeth():
     while True:
@@ -109,6 +132,10 @@ def megaeth():
 def menu():
     # Проверка и создание необходимых путей
     check_and_create_paths()
+    
+    # Проверка формата прокси
+    validate_proxies('data/wallet.csv')
+    
     try:
         # Основное меню
         while True:
