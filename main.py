@@ -17,7 +17,8 @@ from modules.check_files import check_and_create_paths
 from modules.megaeth import (
     process_wallets as process_megaeth_wallets,
     ensure_all_wallets_processed as ensure_all_megaeth_wallets_processed,
-    process_results_to_csv as process_megaeth_results_to_csv
+    process_results_to_csv as process_megaeth_results_to_csv,
+    json_to_csv as megaeth_json_to_csv  # Import the new function
 )
 
 import csv
@@ -95,6 +96,7 @@ def megaeth():
             "What do you want to do?",
             choices=[
                 Choice('💲 Start stats MEGAETH', 'stats_megaeth'),
+                Choice('🕧 result.json TO result.csv', 'json_to_csv'),
                 Choice('🔙 Back', 'Back')
             ],
             qmark='🛠️',
@@ -123,6 +125,12 @@ def megaeth():
             
             # Сохранение результатов в CSV
             process_megaeth_results_to_csv(results)
+        elif action == 'json_to_csv':
+            # Use the new json_to_csv function
+            json_folder = 'results/wallet_json_data'
+            csv_file_path = 'results/result.csv'
+            megaeth_json_to_csv(json_folder, csv_file_path)
+            print(Fore.GREEN + "JSON files successfully converted to CSV." + Style.RESET_ALL)
         
 
 def menu():

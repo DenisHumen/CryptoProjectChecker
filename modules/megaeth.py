@@ -82,12 +82,8 @@ def megaeth_checker(wallet_address, proxy, pyload=pyload1):
             if response.status_code == 404:
                 error_message = response.json().get("message", "")
                 if error_message == "Wallet is not found for chain_id: megaeth_testnet":
-                    log_error(f"Wallet {wallet_address} |MegaETH| not found on first attempt, retrying...")
-                    # Retry once
-                    response = requests.get(url, params=params, headers=headers, proxies={"http": proxy, "https": proxy})
-                    if response.status_code == 404 and response.json().get("message", "") == "Wallet is not found for chain_id: megaeth_testnet":
-                        log_error(f"Wallet {wallet_address} not found after retry, skipping...")
-                        return None  # Skip this wallet
+                    log_error(f"Wallet {wallet_address} |MegaETH| not found, skipping...")
+                    return None  # Skip this wallet
                 else:
                     log_error(f'HTTP error: {response.status_code} - {response.text}')
                     raise ValueError(f'HTTP error: {response.status_code}')
@@ -228,5 +224,45 @@ def process_results_to_csv(results):
                     'active_months': result.get('active_months', ''),
                     'last_updated': result.get('last_updated', '')
                 })
+
+def json_to_csv(json_folder, csv_file_path):
+    """
+    Convert all JSON files in a folder to a single CSV file.
+    """
+    fieldnames = [
+        'wallet_address', 'top_percent', 'transaction_count', 'interacted_contracts',
+        'contracts_created', 'wallet_balance', 'active_days', 'active_weeks',
+        'active_months', 'last_updated'
+    ]
+
+    results = []
+    for filename in os.listdir(json_folder):
+        if filename.endswith('.json'):
+            file_path = os.path.join(json_folder, filename)
+            with open(file_path, 'r') as json_file:
+                try:
+                    data = json.load(json_file)
+                    results.append({
+                        'wallet_address': data.get('wallet_address', ''),
+                        'top_percent': data.get('top_percent', ''),
+                        'transaction_count': data.get('transaction_count', ''),
+                        'interacted_contracts': data.get('interacted_contracts', ''),
+                        'contracts_created': data.get('contracts_created', ''),
+                        'wallet_balance': data.get('wallet_balance', ''),
+                        'active_days': data.get('active_days', ''),
+                        'active_weeks': data.get('active_weeks', ''),
+                        'active_months': data.get('active_months', ''),
+                        'last_updated': data.get('last_updated', '')
+                    })
+                except json.JSONDecodeError as e:
+                    log_error(f"Error decoding JSON file {filename}: {str(e)}")
+
+    with open(csv_file_path, mode='w', newline='') as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(results)
+
+# Example usage:
+# json_to_csv('results/wallet_json_data', 'results/result.csv')
 
 
