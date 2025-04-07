@@ -123,9 +123,7 @@ def megaeth():
             
             # Сохранение результатов в CSV
             process_megaeth_results_to_csv(results)
-        elif action == 'clear_wallet_json_data':
-            # Очистка данных JSON
-            clear_wallet_json_data()
+        
 
 def menu():
     # Проверка и создание необходимых путей
