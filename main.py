@@ -55,7 +55,6 @@ def monad():
                 Choice('💲 Start stats MONAD', 'stats_monad'),
                 Choice('🔍 GasZip monad faucet checker', 'gaszip_monad_faucet_checker'),
                 Choice('🕧 result.json TO result.csv', 'json_to_csv'),
-                Choice('🗑️ Clear wallet json data | Удалит все созданные json после запроса', 'clear_wallet_json_data'),
                 Choice('🔙 Back', 'Back')
             ],
             qmark='🛠️',
@@ -86,9 +85,6 @@ def monad():
             # Проверка GasZip Monad Faucet
             gaszip_monad_checker_process_wallets_from_csv()
             gaszip_monad_checker_export_json_to_csv()
-        elif action == 'clear_wallet_json_data':
-            # Очистка данных JSON
-            clear_wallet_json_data()
         elif action == 'json_to_csv':
             process_json_to_csv()
 
@@ -99,7 +95,6 @@ def megaeth():
             "What do you want to do?",
             choices=[
                 Choice('💲 Start stats MEGAETH', 'stats_megaeth'),
-                Choice('🗑️ Clear wallet json data | Удалит все созданные json после запроса', 'clear_wallet_json_data'),
                 Choice('🔙 Back', 'Back')
             ],
             qmark='🛠️',
@@ -147,6 +142,7 @@ def menu():
                 choices=[
                     Choice('💲 MONAD', 'monad'),
                     Choice('💲 MEGAETH', 'megaeth'),
+                    Choice('🗑️ Clear wallet json data | Удалит все созданные json после запроса', 'clear_wallet_json_data'),
                     Choice('❌ Exit', 'exit')
                 ],
                 qmark='🛠️',
@@ -159,6 +155,10 @@ def menu():
                 monad()
             elif action == 'megaeth':
                 megaeth()
+            elif action == 'clear_wallet_json_data':
+                # Очистка данных JSON
+                clear_wallet_json_data()
+                
     except Exception as e:
         # Обработка ошибок
         print(f"Error: {str(e)}")
