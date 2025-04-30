@@ -8,6 +8,7 @@ import random
 import threading
 from tqdm import tqdm
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 
 log_file_path = 'results/logs/log'
 
@@ -209,24 +210,52 @@ def get_reserv_proxies():
 
 def process_wallets(wallets, proxies, reserv_proxies, num_threads, sleep_between_wallet, sleep_between_replace_proxy, limit_replace_proxy):
     results = []
-    threads = []
-    with tqdm(total=len(wallets)) as pbar:
-        for wallet_address, proxy in zip(wallets, proxies):
-            if len(threads) >= num_threads:
-                for t in threads:
-                    t.join()
-                    pbar.update(1)
-                threads = []
-            thread = threading.Thread(target=process_wallet, args=(wallet_address, proxy, reserv_proxies, results, sleep_between_replace_proxy, limit_replace_proxy))
-            thread.start()
-            threads.append(thread)
-            time.sleep(random.uniform(*sleep_between_wallet))
-        
-        for t in threads:
-            t.join()
-            pbar.update(1)
-    
+    proxy_pool = iter(proxies)  # Create an iterator for proxies
+
+    def process_wallet_task(wallet_address):
+        proxy = next(proxy_pool, random.choice(reserv_proxies))  # Get the next proxy or fallback
+        attempts = 0
+        while attempts < limit_replace_proxy:
+            try:
+                result = monad_checker(wallet_address, proxy)
+                return result, True  # Return result and success status
+            except (ValueError, requests.exceptions.RequestException) as e:
+                log_error(f"Error processing wallet {wallet_address}: {str(e)}")
+                proxy = random.choice(reserv_proxies)  # Replace proxy on failure
+                time.sleep(random.uniform(*sleep_between_replace_proxy))
+                attempts += 1
+        return wallet_address, False  # Return wallet address and failure status
+
+    bar_length = 40  # Length of the progress bar
+    total_wallets = len(wallets)
+    completed_wallets = 0
+
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        future_to_wallet = {executor.submit(process_wallet_task, wallet): wallet for wallet in wallets}
+        for future in as_completed(future_to_wallet):
+            wallet = future_to_wallet[future]
+            try:
+                result, success = future.result(timeout=10)  # Ensure thread doesn't hang for more than 10 seconds
+                if success:
+                    results.append(result)
+                    print(Fore.GREEN + f"🟢 Wallet: {wallet}" + Style.RESET_ALL, end="\r")
+                else:
+                    log_error(f"Failed to process wallet: {wallet}")
+                    print(Fore.RED + f"❌ Wallet: {wallet}" + Style.RESET_ALL, end="\r")
+            except TimeoutError:
+                log_error(f"Timeout error for wallet {wallet}")
+                print(Fore.RED + f"❌ Timeout for wallet: {wallet}" + Style.RESET_ALL, end="\r")
+            except Exception as e:
+                log_error(f"Unhandled exception for wallet {wallet}: {str(e)}")
+                print(Fore.RED + f"❌ Exception for wallet: {wallet}" + Style.RESET_ALL, end="\r")
+            finally:
+                completed_wallets += 1
+                progress = int((completed_wallets / total_wallets) * bar_length)
+                bar = "█" * progress + "░" * (bar_length - progress)
+                print(f"\r[{bar}] {completed_wallets}/{total_wallets}", end="", flush=True)
+
     ensure_all_wallets_processed(wallets, proxies, reserv_proxies, results, sleep_between_replace_proxy, limit_replace_proxy)
+    print()  # Move to the next line after the progress bar is complete
     return results
 
 def process_wallet(wallet_address, proxy, reserv_proxies, results, sleep_between_replace_proxy, limit_replace_proxy):

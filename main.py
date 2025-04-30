@@ -71,7 +71,7 @@ def monad():
             
             # Загрузка конфигурации из TOML-файла
             config = toml.load('config/general_config.toml')
-            num_threads = config.get('THRENDS', 10)
+            num_threads = config.get('THRENDS', 100)
             sleep_between_wallet = config.get('SLEEP_BEATWEEN_WALLET', [1, 3])
             sleep_between_replace_proxy = config.get('SLEEP_BEATWEEN_REAPLECE_PROXY', [1, 3])
             limit_replace_proxy = config.get('LIMIT_REPLACE_PROXY', 10)

@@ -1,7 +1,7 @@
 # -----------"💲 start stats MONAD"|"💲 Start stats MEGAETH" -----------
-THRENDS = 30
+THRENDS = 10
 
-LIMIT_REPLACE_PROXY = 10
+LIMIT_REPLACE_PROXY = 1
 
 #sleep time
 SLEEP_BEATWEEN_WALLET = [1, 3] # seconds
