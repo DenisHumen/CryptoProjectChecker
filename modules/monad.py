@@ -93,19 +93,26 @@ def process_results(results):
 def process_json_to_csv():
     json_dir = 'results/wallet_json_data'
     csv_file_path = 'results/result.csv'
+    wallet_csv_path = 'data/wallet.csv'
     fieldnames = [
         'wallet_address', 'top_percent', 'transaction_count', 'interacted_contracts',
         'wallet_balance', 'active_days', 'active_weeks', 'active_months', 'last_updated',
-        'one_million_nads' 
+        'one_million_nads'
     ]
+
+    # Read wallet addresses from data/wallet.csv
+    with open(wallet_csv_path, mode='r') as wallet_file:
+        reader = csv.reader(wallet_file)
+        next(reader)  # Skip header
+        wallet_order = [row[0] for row in reader]
 
     with open(csv_file_path, mode='w', newline='') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
 
-        for filename in os.listdir(json_dir):
-            if filename.endswith('.json'):
-                file_path = os.path.join(json_dir, filename)
+        for wallet_address in wallet_order:
+            file_path = os.path.join(json_dir, f"{wallet_address}.json")
+            if os.path.exists(file_path):
                 with open(file_path, 'r') as json_file:
                     data = json.load(json_file)
                     response = json.dumps(data)  # Convert the JSON object back to a string
@@ -238,16 +245,16 @@ def process_wallets(wallets, proxies, reserv_proxies, num_threads, sleep_between
                 result, success = future.result(timeout=10)  # Ensure thread doesn't hang for more than 10 seconds
                 if success:
                     results.append(result)
-                    print(Fore.GREEN + f"🟢 Wallet: {wallet}" + Style.RESET_ALL, end="\r")
+                    print(Fore.GREEN + f" | 🟢 Wallet: {wallet}" + Style.RESET_ALL, end="\r")
                 else:
                     log_error(f"Failed to process wallet: {wallet}")
-                    print(Fore.RED + f"❌ Wallet: {wallet}" + Style.RESET_ALL, end="\r")
+                    print(Fore.RED + f" | ❌ Wallet (check 'results/logs/log)': {wallet}" + Style.RESET_ALL, end="\r")
             except TimeoutError:
                 log_error(f"Timeout error for wallet {wallet}")
-                print(Fore.RED + f"❌ Timeout for wallet: {wallet}" + Style.RESET_ALL, end="\r")
+                print(Fore.RED + f" | ❌ Timeout for wallet (check 'results/logs/log)': {wallet}" + Style.RESET_ALL, end="\r")
             except Exception as e:
                 log_error(f"Unhandled exception for wallet {wallet}: {str(e)}")
-                print(Fore.RED + f"❌ Exception for wallet: {wallet}" + Style.RESET_ALL, end="\r")
+                print(Fore.RED + f" | ❌ Exception for wallet (check 'results/logs/log)': {wallet}" + Style.RESET_ALL, end="\r")
             finally:
                 completed_wallets += 1
                 progress = int((completed_wallets / total_wallets) * bar_length)

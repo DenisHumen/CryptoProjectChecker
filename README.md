@@ -93,27 +93,7 @@ SLEEP_BEATWEEN_REAPLECE_PROXY = [1, 3]
 
 4. Результаты будут экспортированы в CSV файл.
 
-## Структура проекта
 
-```
-layerhub_checker/
-├── config/
-│   ├── general_config.toml
-│   └── pyload_presset/
-├── data/
-│   ├── wallet.csv
-│   └── reserv_proxy.csv
-├── modules/
-│   ├── monad.py
-│   └── gaszip_monad_faucet_checker.py
-├── results/
-│   ├── logs/
-│   │   └── log
-│   └── wallet_json_data/
-├── .venv/
-├── main.py
-└── README.md
-```
 
 ### Описание модулей
 

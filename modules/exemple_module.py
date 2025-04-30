@@ -1,13 +1,9 @@
 import requests
 import json
-import os
-import random
-import threading
-from tqdm import tqdm
-import time
 from datetime import datetime
 import csv
 from colorama import Fore, Style
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 
 log_file_path = 'results/logs/log'
 
@@ -83,42 +79,43 @@ def example_checker(wallet_address, proxy):
 
 def process_wallets(wallets, proxies, num_threads, sleep_between_wallet):
     results = []
-    threads = []
-    lock = threading.Lock()  
-    with tqdm(total=len(wallets)) as pbar:
-        def worker(wallet_address, proxy):
-            nonlocal results
+    bar_length = 40  # Length of the progress bar
+    total_wallets = len(wallets)
+    completed_wallets = 0
+
+    def process_wallet_task(wallet_address, proxy):
+        try:
+            result = example_checker(wallet_address, proxy)
+            return result, True  # Return result and success status
+        except Exception as e:
+            log_error(f"Error processing wallet {wallet_address}: {str(e)}")
+            return wallet_address, False  # Return wallet address and failure status
+
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        future_to_wallet = {executor.submit(process_wallet_task, wallet, proxy): wallet for wallet, proxy in zip(wallets, proxies)}
+        for future in as_completed(future_to_wallet):
+            wallet = future_to_wallet[future]
             try:
-                result = example_checker(wallet_address, proxy)
-                if result is not None: 
-                    with lock:
-                        results.append(result)
+                result, success = future.result(timeout=10)  # Ensure thread doesn't hang for more than 10 seconds
+                if success:
+                    results.append(result)
+                    print(Fore.GREEN + f" | 🟢 Wallet: {wallet}" + Style.RESET_ALL, end="\r")
+                else:
+                    log_error(f"Failed to process wallet: {wallet}")
+                    print(Fore.RED + f" | ❌ Wallet (check 'results/logs/log)': {wallet}" + Style.RESET_ALL, end="\r")
+            except TimeoutError:
+                log_error(f"Timeout error for wallet {wallet}")
+                print(Fore.RED + f" | ❌ Timeout for wallet (check 'results/logs/log)': {wallet}" + Style.RESET_ALL, end="\r")
             except Exception as e:
-                log_error(f"Error processing wallet {wallet_address}: {str(e)}")
+                log_error(f"Unhandled exception for wallet {wallet}: {str(e)}")
+                print(Fore.RED + f" | ❌ Exception for wallet (check 'results/logs/log)': {wallet}" + Style.RESET_ALL, end="\r")
             finally:
-                pbar.update(1)
+                completed_wallets += 1
+                progress = int((completed_wallets / total_wallets) * bar_length)
+                bar = "█" * progress + "░" * (bar_length - progress)
+                print(f"\r[{bar}] {completed_wallets}/{total_wallets}", end="", flush=True)
 
-        for wallet_address, proxy in zip(wallets, proxies):
-            if len(threads) >= num_threads:
-                for t in threads:
-                    t.join()
-                threads = []
-            thread = threading.Thread(target=worker, args=(wallet_address, proxy))
-            thread.start()
-            threads.append(thread)
-            time.sleep(random.uniform(*sleep_between_wallet))
-        
-        for t in threads:
-            t.join()
-    
-    process_results_to_csv(results)
-
-    wallets_with_data = len([result for result in results if result is not None])
-    wallets_without_data = len(wallets) - wallets_with_data
-
-    print(Fore.GREEN + f"Wallets with data: {wallets_with_data}" + Style.RESET_ALL)
-    print(Fore.RED + f"Wallets without data: {wallets_without_data}" + Style.RESET_ALL)
-
+    print()  # Move to the next line after the progress bar is complete
     return results
 
 def process_results_to_csv(results):
