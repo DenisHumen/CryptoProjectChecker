@@ -9,6 +9,9 @@ import threading
 from tqdm import tqdm
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
+from rich.console import Console
+from contextlib import contextmanager
+from itertools import cycle
 
 log_file_path = 'results/logs/log'
 
@@ -19,6 +22,13 @@ pyload1 = {
     "method": "get_account",
     "params": "0x"
 }
+
+@contextmanager
+def spinner(message: str = "Processing..."):
+    """Displays a spinner with a custom message."""
+    console = Console()
+    with console.status(f"[bold green]⠴ {message}"):
+        yield
 
 def log_error(message):
     with open(log_file_path, 'a') as log_file:
@@ -139,7 +149,7 @@ def extract_value(response, key):
         end = response.index(',', start)
         value = response[start:end].strip()
         if value.startswith(':'):
-            value = value[1:].strip()
+            value = value[1:].trip()
         if value.endswith('}'):
             value = value[:-1].strip()
         return value
@@ -218,6 +228,7 @@ def get_reserv_proxies():
 def process_wallets(wallets, proxies, reserv_proxies, num_threads, sleep_between_wallet, sleep_between_replace_proxy, limit_replace_proxy):
     results = []
     proxy_pool = iter(proxies)  # Create an iterator for proxies
+    spinner_cycle = cycle(["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])  # Spinner animation frames
 
     def process_wallet_task(wallet_address):
         proxy = next(proxy_pool, random.choice(reserv_proxies))  # Get the next proxy or fallback
@@ -245,21 +256,26 @@ def process_wallets(wallets, proxies, reserv_proxies, num_threads, sleep_between
                 result, success = future.result(timeout=10)  # Ensure thread doesn't hang for more than 10 seconds
                 if success:
                     results.append(result)
-                    print(Fore.GREEN + f" | 🟢 Wallet: {wallet}" + Style.RESET_ALL, end="\r")
+                    status_color = Fore.GREEN
                 else:
                     log_error(f"Failed to process wallet: {wallet}")
-                    print(Fore.RED + f" | ❌ Wallet (check 'results/logs/log)': {wallet}" + Style.RESET_ALL, end="\r")
+                    status_color = Fore.RED
             except TimeoutError:
                 log_error(f"Timeout error for wallet {wallet}")
-                print(Fore.RED + f" | ❌ Timeout for wallet (check 'results/logs/log)': {wallet}" + Style.RESET_ALL, end="\r")
+                status_color = Fore.RED
             except Exception as e:
                 log_error(f"Unhandled exception for wallet {wallet}: {str(e)}")
-                print(Fore.RED + f" | ❌ Exception for wallet (check 'results/logs/log)': {wallet}" + Style.RESET_ALL, end="\r")
+                status_color = Fore.RED
             finally:
                 completed_wallets += 1
                 progress = int((completed_wallets / total_wallets) * bar_length)
                 bar = "█" * progress + "░" * (bar_length - progress)
-                print(f"\r[{bar}] {completed_wallets}/{total_wallets}", end="", flush=True)
+                spinner_frame = next(spinner_cycle)  # Get the next frame of the spinner
+                print(
+                    f"\r[{bar}] {completed_wallets}/{total_wallets} | {spinner_frame} | {status_color}Wallet: {wallet}{Style.RESET_ALL}",
+                    end="",
+                    flush=True,
+                )
 
     ensure_all_wallets_processed(wallets, proxies, reserv_proxies, results, sleep_between_replace_proxy, limit_replace_proxy)
     print()  # Move to the next line after the progress bar is complete

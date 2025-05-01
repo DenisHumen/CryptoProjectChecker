@@ -4,6 +4,7 @@ from datetime import datetime
 import csv
 from colorama import Fore, Style
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
+from itertools import cycle
 
 log_file_path = 'results/logs/log'
 
@@ -79,6 +80,7 @@ def example_checker(wallet_address, proxy):
 
 def process_wallets(wallets, proxies, num_threads, sleep_between_wallet):
     results = []
+    spinner_cycle = cycle(["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])  # Spinner animation frames
     bar_length = 40  # Length of the progress bar
     total_wallets = len(wallets)
     completed_wallets = 0
@@ -99,21 +101,26 @@ def process_wallets(wallets, proxies, num_threads, sleep_between_wallet):
                 result, success = future.result(timeout=10)  # Ensure thread doesn't hang for more than 10 seconds
                 if success:
                     results.append(result)
-                    print(Fore.GREEN + f" | 🟢 Wallet: {wallet}" + Style.RESET_ALL, end="\r")
+                    status_color = Fore.GREEN
                 else:
                     log_error(f"Failed to process wallet: {wallet}")
-                    print(Fore.RED + f" | ❌ Wallet (check 'results/logs/log)': {wallet}" + Style.RESET_ALL, end="\r")
+                    status_color = Fore.RED
             except TimeoutError:
                 log_error(f"Timeout error for wallet {wallet}")
-                print(Fore.RED + f" | ❌ Timeout for wallet (check 'results/logs/log)': {wallet}" + Style.RESET_ALL, end="\r")
+                status_color = Fore.RED
             except Exception as e:
                 log_error(f"Unhandled exception for wallet {wallet}: {str(e)}")
-                print(Fore.RED + f" | ❌ Exception for wallet (check 'results/logs/log)': {wallet}" + Style.RESET_ALL, end="\r")
+                status_color = Fore.RED
             finally:
                 completed_wallets += 1
                 progress = int((completed_wallets / total_wallets) * bar_length)
                 bar = "█" * progress + "░" * (bar_length - progress)
-                print(f"\r[{bar}] {completed_wallets}/{total_wallets}", end="", flush=True)
+                spinner_frame = next(spinner_cycle)  # Get the next frame of the spinner
+                print(
+                    f"\r[{bar}] {completed_wallets}/{total_wallets} | {spinner_frame} | {status_color}Wallet: {wallet}{Style.RESET_ALL}",
+                    end="",
+                    flush=True,
+                )
 
     print()  # Move to the next line after the progress bar is complete
     return results
