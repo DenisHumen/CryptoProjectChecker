@@ -171,37 +171,35 @@ def process_wallets(wallets, proxies, reserv_proxies, num_threads, sleep_between
     total_wallets = len(wallets)
     completed_wallets = 0
 
-    print(f"💲 Starting MEGAETH stats for {total_wallets} wallets...")
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         future_to_wallet = {executor.submit(process_wallet_task, wallet): wallet for wallet in wallets}
-        while completed_wallets < total_wallets:
-            spinner_frame = next(spinner_cycle)  # Get the next frame of the spinner
-            for future in as_completed(future_to_wallet, timeout=0.1):  # Check futures with a short timeout
-                wallet = future_to_wallet[future]
-                try:
-                    result, success = future.result(timeout=0.1)  # Ensure thread doesn't hang
-                    if success:
-                        results.append(result)
-                        status_color = Fore.GREEN
-                    else:
-                        log_error(f"Failed to process wallet: {wallet}")
-                        status_color = Fore.RED
-                except TimeoutError:
-                    log_error(f"Timeout error for wallet {wallet}")
+        for future in as_completed(future_to_wallet):
+            wallet = future_to_wallet[future]
+            try:
+                result, success = future.result(timeout=10)  # Ensure thread doesn't hang for more than 10 seconds
+                if success:
+                    results.append(result)
+                    status_color = Fore.GREEN
+                else:
+                    log_error(f"Failed to process wallet: {wallet}")
                     status_color = Fore.RED
-                except Exception as e:
-                    log_error(f"Unhandled exception for wallet {wallet}: {str(e)}")
-                    status_color = Fore.RED
-                finally:
-                    completed_wallets += 1
-                    progress = int((completed_wallets / total_wallets) * bar_length)
-                    bar = "█" * progress + "░" * (bar_length - progress)
-                    spinner_color = Fore.GREEN if success else Fore.RED
-                    print(
-                        f"\r[{bar}] {completed_wallets}/{total_wallets} | {spinner_color}{spinner_frame}{Style.RESET_ALL} | Wallet: {wallet}",
-                        end="",
-                        flush=True,
-                    )
+            except TimeoutError:
+                log_error(f"Timeout error for wallet {wallet}")
+                status_color = Fore.RED
+            except Exception as e:
+                log_error(f"Unhandled exception for wallet {wallet}: {str(e)}")
+                status_color = Fore.RED
+            finally:
+                completed_wallets += 1
+                progress = int((completed_wallets / total_wallets) * bar_length)
+                bar = "█" * progress + "░" * (bar_length - progress)
+                spinner_frame = next(spinner_cycle)  # Get the next frame of the spinner
+                print(
+                    f"\r[{bar}] {completed_wallets}/{total_wallets} | {spinner_frame} | {status_color}Wallet: {wallet}{Style.RESET_ALL}",
+                    end="",
+                    flush=True,
+                )
+
 
     ensure_all_wallets_processed(wallets, proxies, reserv_proxies, results, sleep_between_replace_proxy, limit_replace_proxy)
     print()  # Move to the next line after the progress bar is complete
