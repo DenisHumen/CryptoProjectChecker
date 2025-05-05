@@ -2,12 +2,12 @@ import requests
 import json
 import os
 import random
-import threading
-from tqdm import tqdm
 import time
 from datetime import datetime
 import csv
 from colorama import Fore, Style
+from itertools import cycle
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 
 log_file_path = 'results/logs/log'
 
@@ -150,45 +150,61 @@ def process_wallet(wallet_address, proxy, reserv_proxies, results, sleep_between
 
 def process_wallets(wallets, proxies, reserv_proxies, num_threads, sleep_between_wallet, sleep_between_replace_proxy, limit_replace_proxy):
     results = []
-    threads = []
-    lock = threading.Lock()  # To safely append results in multithreading
-    with tqdm(total=len(wallets)) as pbar:
-        def worker(wallet_address, proxy):
-            nonlocal results
+    proxy_pool = iter(proxies)  # Create an iterator for proxies
+    spinner_cycle = cycle(["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"])  # Spinner animation frames
+
+    def process_wallet_task(wallet_address):
+        proxy = next(proxy_pool, random.choice(reserv_proxies))  # Get the next proxy or fallback
+        attempts = 0
+        while attempts < limit_replace_proxy:
             try:
                 result = megaeth_checker(wallet_address, proxy)
-                if result is not None:  # Skip if result is None
-                    with lock:
-                        results.append(result)
-            except Exception as e:
+                return result, True  # Return result and success status
+            except (ValueError, requests.exceptions.RequestException) as e:
                 log_error(f"Error processing wallet {wallet_address}: {str(e)}")
-            finally:
-                pbar.update(1)
+                proxy = random.choice(reserv_proxies)  # Replace proxy on failure
+                time.sleep(random.uniform(*sleep_between_replace_proxy))
+                attempts += 1
+        return wallet_address, False  # Return wallet address and failure status
 
-        for wallet_address, proxy in zip(wallets, proxies):
-            if len(threads) >= num_threads:
-                for t in threads:
-                    t.join()
-                threads = []
-            thread = threading.Thread(target=worker, args=(wallet_address, proxy))
-            thread.start()
-            threads.append(thread)
-            time.sleep(random.uniform(*sleep_between_wallet))
-        
-        for t in threads:
-            t.join()
-    
+    bar_length = 40  # Length of the progress bar
+    total_wallets = len(wallets)
+    completed_wallets = 0
+
+    print(f"💲 Starting MEGAETH stats for {total_wallets} wallets...")
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        future_to_wallet = {executor.submit(process_wallet_task, wallet): wallet for wallet in wallets}
+        while completed_wallets < total_wallets:
+            spinner_frame = next(spinner_cycle)  # Get the next frame of the spinner
+            for future in as_completed(future_to_wallet, timeout=0.1):  # Check futures with a short timeout
+                wallet = future_to_wallet[future]
+                try:
+                    result, success = future.result(timeout=0.1)  # Ensure thread doesn't hang
+                    if success:
+                        results.append(result)
+                        status_color = Fore.GREEN
+                    else:
+                        log_error(f"Failed to process wallet: {wallet}")
+                        status_color = Fore.RED
+                except TimeoutError:
+                    log_error(f"Timeout error for wallet {wallet}")
+                    status_color = Fore.RED
+                except Exception as e:
+                    log_error(f"Unhandled exception for wallet {wallet}: {str(e)}")
+                    status_color = Fore.RED
+                finally:
+                    completed_wallets += 1
+                    progress = int((completed_wallets / total_wallets) * bar_length)
+                    bar = "█" * progress + "░" * (bar_length - progress)
+                    spinner_color = Fore.GREEN if success else Fore.RED
+                    print(
+                        f"\r[{bar}] {completed_wallets}/{total_wallets} | {spinner_color}{spinner_frame}{Style.RESET_ALL} | Wallet: {wallet}",
+                        end="",
+                        flush=True,
+                    )
+
     ensure_all_wallets_processed(wallets, proxies, reserv_proxies, results, sleep_between_replace_proxy, limit_replace_proxy)
-    process_results_to_csv(results)
-
-    # Count wallets with and without data
-    wallets_with_data = len([result for result in results if result is not None])
-    wallets_without_data = len(wallets) - wallets_with_data
-
-    # Print results
-    print(Fore.GREEN + f"Wallets with data: {wallets_with_data}" + Style.RESET_ALL)
-    print(Fore.RED + f"Wallets without data: {wallets_without_data}" + Style.RESET_ALL)
-
+    print()  # Move to the next line after the progress bar is complete
     return results
 
 def ensure_all_wallets_processed(wallets, proxies, reserv_proxies, results, sleep_between_replace_proxy, limit_replace_proxy):
