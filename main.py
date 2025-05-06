@@ -1,4 +1,5 @@
 import toml
+import os
 from questionary import Choice, select
 from modules.monad import (
     get_wallets_and_proxies,
@@ -20,12 +21,24 @@ from modules.megaeth import (
     process_results_to_csv as process_megaeth_results_to_csv,
     json_to_csv as megaeth_json_to_csv  # Import the new function
 )
+from modules.town_stats import process_town_stats
+from modules.town_stats import run_town_stats
 
 import csv
 from colorama import Fore, Style
+import shutil
+from modules.github.check_version import check_version
+
+TMP_DIR = 'tmp'
+
+def cleanup_tmp():
+    """Clean up the tmp directory."""
+    if os.path.exists(TMP_DIR):
+        shutil.rmtree(TMP_DIR)
+        print(Fore.GREEN + f"Temporary directory '{TMP_DIR}' cleaned up." + Style.RESET_ALL)
 
 def validate_proxies(file_path):
-    with open(file_path, 'r') as csvfile:
+    with open(file_path, 'r') as csvfile, open('data/wallet.csv', 'r') as csvfile:
         reader = csv.DictReader(csvfile)
         invalid_lines = [
             line_number for line_number, row in enumerate(reader, start=2)
@@ -45,7 +58,7 @@ def validate_proxies(file_path):
         print(Fore.RED + "Example of correct format:\n\twallet_address,proxy\n\t0x90D9f2c2c60FHHTDTaFEA1D6FFDFRERG7116f68,http://login:password@ip:port" + Style.RESET_ALL)
         exit(1)
     
-    print(Fore.GREEN + "All proxies are in the correct format." + Style.RESET_ALL)
+    #print(Fore.GREEN + "All proxies are in the correct format." + Style.RESET_ALL)
 
 def monad():
     while True:
@@ -148,6 +161,7 @@ def menu():
                 choices=[
                     Choice('💲 MONAD', 'monad'),
                     Choice('💲 MEGAETH', 'megaeth'),
+                    Choice('💲 Process Town Stats', 'town_stats'),
                     Choice('🗑️ Clear wallet json data | Удалит все созданные json после запроса', 'clear_wallet_json_data'),
                     Choice('❌ Exit', 'exit')
                 ],
@@ -164,12 +178,20 @@ def menu():
             elif action == 'clear_wallet_json_data':
                 # Очистка данных JSON
                 clear_wallet_json_data()
+            elif action == 'town_stats':
+                # Fetch, process, and clean up Town Stats
+                run_town_stats()
                 
     except Exception as e:
         # Обработка ошибок
         print(f"Error: {str(e)}")
+    finally:
+        # Clean up temporary files
+        cleanup_tmp()
 
 def main():
+    # Check for the latest version
+    check_version()
     menu()
 
 main()

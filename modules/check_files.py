@@ -38,4 +38,5 @@ def check_and_create_paths():
         for item in created_items:
             print(Fore.GREEN + f"  - {item}" + Style.RESET_ALL)
     else:
-        print(Fore.GREEN + Style.BRIGHT + "\n\n✅ All required items already exist." + Style.RESET_ALL)
+        None
+        #print(Fore.GREEN + Style.BRIGHT + "\n\n✅ All required items already exist." + Style.RESET_ALL)
