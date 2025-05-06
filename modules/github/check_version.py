@@ -27,13 +27,19 @@ def get_github_commit_info() -> Tuple[str, str, str]:
     Returns: (commit_hash, commit_date, commit_message)
     """
     try:
-        response = requests.get(GITHUB_API_URL)
+        response = requests.get(GITHUB_API_URL, timeout=10)  # Add a timeout to prevent hanging
         response.raise_for_status()
         commit_data = response.json()
         commit_hash = commit_data["sha"]
         commit_date = commit_data["commit"]["committer"]["date"]
         commit_message = commit_data["commit"]["message"]
         return commit_hash, commit_date, commit_message
+    except requests.exceptions.Timeout:
+        print("❌ Error fetching GitHub version: Request timed out. Please check your internet connection.")
+        return None, None, None
+    except requests.exceptions.ConnectionError as e:
+        print(f"❌ Error fetching GitHub version: Connection error. {e}")
+        return None, None, None
     except requests.exceptions.RequestException as e:
         print(f"❌ Error fetching GitHub version: {e}")
         return None, None, None
