@@ -1,6 +1,6 @@
 # crypto_wallet_checker
 
-### Пожертвование ``` TRC20 - TJ9KCpi3hHdsgaLuLvzDq35bMkJAuPVMKSv ```
+### Пожертвование ``` TRC20 - TJ9KCpi3hHdsgaLuLvzDq35bMkJAuPVMKS ```
 
 #### ```❗ Инструмент только начал писать, в дальнейшем будет обновляться.```
 
