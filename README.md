@@ -1,7 +1,6 @@
 # crypto_wallet_checker
 
-### Пожертвование ``` TRC20 - TRWzXZE16bgJg3eHa9n8q4ioZjMgKHwF9a ```
-<img src="usdt.jpg" alt="Donation" width="150"/>
+### Пожертвование ``` TRC20 - TJ9KCpi3hHdsgaLuLvzDq35bMkJAuPVMKSv ```
 
 #### ```❗ Инструмент только начал писать, в дальнейшем будет обновляться.```
 
