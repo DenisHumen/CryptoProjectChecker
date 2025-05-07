@@ -18,14 +18,10 @@ def get_local_commit_info() -> Tuple[str, str]:
 
         return commit_hash, commit_date
     except subprocess.CalledProcessError as e:
-        print(f"❌ Error retrieving local commit info: {e}")
+        print(f"❌ **Error retrieving local commit info:** {e}")
         return None, None
 
 def get_github_commit_info() -> Tuple[str, str, str]:
-    """
-    Get the latest commit info from GitHub.
-    Returns: (commit_hash, commit_date, commit_message)
-    """
     try:
         response = requests.get(GITHUB_API_URL, timeout=10)  # Add a timeout to prevent hanging
         response.raise_for_status()
@@ -35,13 +31,13 @@ def get_github_commit_info() -> Tuple[str, str, str]:
         commit_message = commit_data["commit"]["message"]
         return commit_hash, commit_date, commit_message
     except requests.exceptions.Timeout:
-        print("❌ Error fetching GitHub version: Request timed out. Please check your internet connection.")
+        print("❌ **Error fetching GitHub version:** Request timed out. Please check your internet connection.")
         return None, None, None
     except requests.exceptions.ConnectionError as e:
-        print(f"❌ Error fetching GitHub version: Connection error. {e}")
+        print(f"❌ **Error fetching GitHub version:** Connection error. {e}")
         return None, None, None
     except requests.exceptions.RequestException as e:
-        print(f"❌ Error fetching GitHub version: {e}")
+        print(f"❌ **Error fetching GitHub version:** {e}")
         return None, None, None
 
 def compare_versions(
@@ -60,27 +56,31 @@ def compare_versions(
             return (
                 True,
                 f'\n✅ You are using the latest version!\n'
-                f'\n\n📅 Last update: {formatted_date}\n'
+                f'\n\n📅 Last update:** {formatted_date}\n'
             )
 
         return (
             False,
-            f"⚠️ Update available!\n"
+            f"⚠️⚠️⚠️ Update available!\n"
             f"📅 Latest update released: {formatted_date}\n"
-            f"ℹ️ To update, use: git pull\n"
-            f"📥 Or download from: https://github.com/DenisHumen/CryptoProjectChecker",
+            f"ℹ️ To update, use: `git pull`\n"
+            f"📥 Or download from: \033]8;;https://github.com/DenisHumen/CryptoProjectChecker\033\\https://github.com/DenisHumen/CryptoProjectChecker\033]8;;\033\\",
         )
 
     except Exception as e:
-        print(f"❌ Error comparing versions: {e}")
+        print(f"❌ **Error comparing versions:** {e}")
         return False, "Error comparing versions"
 
 def check_version():
+    print(
+        f"📥 My GitHub: \033]8;;https://github.com/DenisHumen\033\\https://github.com/DenisHumen\033]8;;\033\\\n"
+    )
+
     local_hash, local_date = get_local_commit_info()
     github_hash, github_date, commit_message = get_github_commit_info()
 
     if not all([local_hash, local_date, github_hash, github_date]):
-        print("❌ Unable to check version. Missing data.")
+        print("❌ **Unable to check version. Missing data.**")
         return
 
     is_latest, message = compare_versions(local_date, github_date, local_hash, github_hash, commit_message)
